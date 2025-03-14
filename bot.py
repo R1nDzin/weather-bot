@@ -11,40 +11,43 @@ cities = {
     "Казань": "kazan-4364"
 }
 
+# Функция получения температуры с Gismeteo
 def get_temp(city_url):
-    response = requests.get(f"https://www.gismeteo.ru/weather-{city_url}/")
+    url = f"https://www.gismeteo.ru/weather-{city_url}/now/"
+    response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     temp_span = soup.find('span', class_='unit_temperature_c')
     if temp_span:
-        return int(temp_span.text.replace('−', '-'))
+        return int(temp_span.text.replace('−', '-').replace('°', '').strip())
     else:
         return None
 
 def get_advice(temp):
     if temp <= 0:
-        return "Очень холодно, надевай шапку и куртку 🥶!"
+        return "🥶 Очень холодно, надевай шапку и куртку!"
     elif temp <= 10:
         return "Прохладно, нужна куртка 🧥."
     elif temp <= 20:
-        return "Хорошо надеть лёгкую куртку или свитер 👕."
+        return "Комфортно, подойдет легкая куртка или кофта! 👕"
     else:
-        return "Тепло, подойдёт футболка и шорты ☀️."
+        return "Тепло, футболка и шорты подойдут отлично ☀️"
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    buttons = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-    buttons.add(*cities.keys())
-    bot.send_message(message.chat.id, "Выбери город:", reply_markup=buttons)
+    markup = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+    markup.add(*cities.keys())
+    bot.send_message(message.chat.id, "Выбери город:", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text in cities)
 def send_weather(message):
-    city_name = message.text
-    city_code = cities[city_name]
-    temp = get_temp(city_code)
+    city = message.text
+    city_url = cities[city]
+    temp = get_temp(city_url)
+    
     if temp is not None:
         advice = get_advice(temp)
-        bot.send_message(message.chat.id, f"В городе {city_name} сейчас {temp}°C.\n{advice}")
+        bot.send_message(message.chat.id, f"🌡 Погода в {city} сейчас {temp}°C.\n{advice}")
     else:
-        bot.send_message(message.chat.id, "Не могу получить погоду. Попробуй позже.")
+        bot.send_message(message.chat.id, "Не удалось получить погоду. Попробуй позже.")
 
 bot.polling()
